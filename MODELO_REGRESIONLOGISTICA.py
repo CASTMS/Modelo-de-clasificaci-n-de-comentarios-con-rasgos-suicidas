@@ -199,43 +199,5 @@ print (lr_auc)
 f1=2*((precision*recall)/(precision+recall))
 print ("F1 Score: ", f1)
 
-"""
-result_average, h = [], ['Model', 'Acc.', 'Pre.', 'Rec.', 'F1', 'AUC']
-lr_acc, lr_pre, lr_rec, lr_f1, lr_auc = [], [], [], [], []
-num_sampling=48
-for i in range(num_sampling):
-    # bajo muestreo
-    df_pos = df_all.loc[df_all['y'] == 1]
-    df_neg = df_all.loc[df_all['y'] == 0]
-    df_sample = pd.concat([df_pos, df_neg.sample(len(df_pos['y']))])
-    df_sample = df_sample.dropna()
-    X = df_sample[df_sample.columns[:-1]].values
-    y = df_sample['y'].values
-     
-    # 10-fold cross validation
-    num_fold = 10
-    kf = KFold(n_splits=num_fold, shuffle=True, random_state=0)
-    for train_index, test_index in kf.split(X):
-        num_fold -= 1
-        X_train, X_test = X[train_index], X[test_index]
-        y_train, y_test = y[train_index], y[test_index]
-        
-        # Logisitc Regression
-        clf = LogisticRegression(penalty='l2', tol=1e-8)
-        clf.fit(X_train, y_train)
-        y_pred = clf.predict_proba(X_test)[:,1]
-        acc, pre, rec, f1, auc = evaluate_prediction(y_test, y_pred, k_th=num_fold,
-                                                         model_name='Logistic Regression', 
-                                                         dataset_name=args.dataset)
-        lr_acc.append(acc)
-        lr_pre.append(pre)
-        lr_rec.append(rec)
-        lr_f1.append(f1)
-        lr_auc.append(auc)
-
-result_average.append(['Logistic Regression', np.mean(lr_acc), np.mean(lr_pre), 
-                       np.mean(lr_rec), np.mean(lr_f1), np.mean(lr_auc)])
-
-"""
-
+                                      
 
