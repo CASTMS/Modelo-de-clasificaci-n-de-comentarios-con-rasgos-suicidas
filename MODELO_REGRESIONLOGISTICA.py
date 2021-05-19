@@ -30,14 +30,6 @@ def load_df():
     train  = pd.read_excel(file_name)
     return train 
 
-#FUNCION PARA CARGAR DATOS DE PRUEBA 
-def load_df_pred():
-    file_name = 'D:/CURSOS/CICLO REGULAR-2021-1/SEM. INV/Intento/data_excel_test2.xlsx'
-    test  = pd.read_excel(file_name)
-    return test 
-
-
-#CARGAR DATOS DE ENTRENAMIENTO Y DE PRUEBA 
 
 train = load_df()
 test=load_df_pred()
@@ -168,20 +160,22 @@ print ("")
 print("Promedio de accuracy: ", scores.mean())
 print ("")
 
-test_predicted = predict(tfidf_test, theta_final)
+test_predicted = predict(tfidf_train, theta_final)
 
 # Precisión en los datos de prueba
-accuracy_test = accuracy_score(test_label, test_predicted)
-print ("Acurracy en los datos de prueba: ")
-print (accuracy_test)
+accuracy_test = accuracy_score(train_label, test_predicted)
+#print ("Acurracy: ")
+#print (accuracy_test)
 print ("")
 # Create confusion matrix
-confusionMatrix = pd.DataFrame(data = confusion_matrix(test_label, (test_predicted >= 0.5) .astype(int)), 
+confusionMatrix = pd.DataFrame(data = confusion_matrix(train_label, (test_predicted >= 0.5) .astype(int)), 
                                columns=["0", "1"], index = ["0", "1"])
 print ("Matriz de confusión")
 print(confusionMatrix)
 print ("")
 # Precision = TP/(TP + FP)
+print ("Acurracy: ", accuracy_test)
+
 precision = round((confusionMatrix.iloc[1, 1] / (confusionMatrix.iloc[1, 1] + confusionMatrix.iloc[0, 1])) * 100, 2)
 print("Precision: ", precision)
 
@@ -190,14 +184,13 @@ recall = round((confusionMatrix.iloc[1, 1] / (confusionMatrix.iloc[1, 1] + confu
 print("Recall: ", recall)
 
 # calculate roc curve
-fpr, tpr, thresholds = metrics.roc_curve(test_label, test_predicted)
-lr_auc = metrics.roc_auc_score(test_label, test_predicted)
-print ("AUC")
-print (lr_auc)
+fpr, tpr, thresholds = metrics.roc_curve(train_label, test_predicted)
+lr_auc = metrics.roc_auc_score(train_label, test_predicted)
+print ("AUC: ", lr_auc)
+
 
 #F1
 f1=2*((precision*recall)/(precision+recall))
 print ("F1 Score: ", f1)
-
                                       
 
