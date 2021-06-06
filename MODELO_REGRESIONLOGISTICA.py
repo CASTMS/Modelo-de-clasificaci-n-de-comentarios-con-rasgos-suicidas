@@ -1,40 +1,32 @@
-import string
-import nltk
-import numpy as np
-import re
-import csv
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import classification_report
+from sklearn.svm import SVC
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.model_selection import KFold
-from gensim import corpora
-from gensim.models.ldamodel import LdaModel
-from nltk.stem.wordnet import WordNetLemmatizer
-from sklearn.linear_model import LogisticRegression
-import argparse
-import csv
-import datetime
-from sklearn import metrics
-import sklearn.metrics as metrics
-from tabulate import tabulate
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import KFold
 from nltk.corpus import stopwords
+from nltk.stem.wordnet import WordNetLemmatizer
+import nltk
+import re
+import string
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn import svm
+import sklearn.metrics as metrics
 from sklearn.metrics import accuracy_score
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import f1_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
+from sklearn.metrics import confusion_matrix
+from sklearn.linear_model import LogisticRegression
+from sklearn.exceptions import FitFailedWarning
+import warnings
 
-#FUNCION PARA CARGAR DATOS DE ENTRENAMIENTO 
-def load_df():
-    file_name = 'D:/CURSOS/CICLO REGULAR-2021-1/SEM. INV/Intento/data_excel2_2.0__.xlsx'
-    train  = pd.read_excel(file_name)
-    return train 
+# IMPORTAR DATA
 
+datasets = pd.read_excel('D:/CURSOS/CICLO REGULAR-2021-1/SEM. INV/Intento/data_excel2_2.0__.xlsx')
+X= datasets['tweets']
+Y=datasets['y']
 
-train = load_df()
-test=load_df_pred()
-print (train.shape)
-print (test.shape)
 
 #STOPWORDS Y LEMATIZACION 
 list_stop_words = set(stopwords.words('english'))
@@ -64,133 +56,131 @@ def lematizacion(texto):
     return texto
 
 #LIMPIAR Y APLICAR LA LEMATIZACION EN LA COLUMNA DE TWEETS DE ENTRENAMIENTO Y DE PRUEBA 
-train['tweets'] = train['tweets'].apply(limpieza)
-train['tweets'] = train['tweets'].apply(lematizacion)
-#print (train['tweets'] )
-test['tweets'] = test['tweets'].apply(limpieza)
-test['tweets'] = test['tweets'].apply(lematizacion)
-#print (test['tweets'])
+X = X.apply(limpieza)
+X = X.apply(lematizacion)
+#print (X)
 
-#COLUMNAS DE ETIQUETAS 
-train_label = train['y']
-print ("#####################################")
-print (train_label)
-print ("#####################################")
-test_label = test['y']
-
+#ESCALA DE CARACTERISTICAS 
 #APLICAR TF-IDF EN LA COLUMNA DE LOS WEETS DE ENTRENAMIENTO Y DE PRUEBA 
 vectorizer = TfidfVectorizer(stop_words='english', max_features = 3000)
-X_train=train['tweets'] 
-X_test=test['tweets']
-tfidf_train = vectorizer.fit_transform(X_train).toarray()
-tfidf_test = vectorizer.transform(X_test).toarray()
-print(X_train)
-#print (tfidf_train)
-print(vectorizer.get_feature_names())
-print(vectorizer.vocabulary_)
-#print ("//////////////////////////////////////////")
+X = vectorizer.fit_transform(X).toarray()
+#tfidf_test = vectorizer.fit_transform(X_Test).toarray()
+#tfidf_test = vectorizer.transform(X_Test).toarray()
+#print(X_Train)
+#print (X)
 
-#MODELO DE REGRESION LOGISTICA
-# función sigmoidea
-def sigmoidea(X, weight):
-    z = np.dot(X, weight)
-    return 1 / (1 + np.exp(-z))
 
-# calculando el gradiente DESCENDIENTE (estimar mejores coficientes)
-def gradient_descent(X, h, y):
-    return np.dot(X.T, (h - y)) / y.shape[0]
+# DIVIDIR EL CONJUNTO DE DATOS 
+X_Train, X_Test, Y_Train, Y_Test = train_test_split(
+    X, Y, test_size=0.20, random_state=0)
 
-#actualización de los pesos
-#que es el peso: tasa de aprendizaje multiplicada por gradiente
-def peso_actualizado(weight, learning_rate, gradient):
-    return weight - learning_rate * gradient
+print (Y_Test.shape)
+print (X_Test.shape)
 
-def predict(x, theta):
-    theta_new = theta[:, np.newaxis]
-    return sigmoidea(x,theta_new)
+#GRID SEARCH
+# Establecer los parámetros mediante validación cruzada
+param_grid = [{'penalty':['l1'],'C':[1,4,5,10,100,1000],'solver':['liblinear']},
+              {'penalty':['l2'],'C':[1,4,5,10,100,1000],'solver':['sag', 'saga','lbfgs']}]
 
-# Iterar y aprender los parámetros
-def gradient(X, y):
-    num_iter = 100
-    theta = np.zeros(X.shape[1])
-    for i in range(num_iter):
-        h = sigmoidea(X, theta)
-        gradient = gradient_descent(X, h, y)
-        theta = peso_actualizado(theta, 0.1, gradient)
-    return theta
 
-# La probabilidad promedio de 0 y 1 en los datos de entrenamiento es de alrededor de 0.5
-#por lo que establecemos el umbral para la clasificación en esta media
-def accuracy_score(actual, pred):
-    predicted_class = ((pred >= 0.5) .astype(int))
-    predicted_class = predicted_class.flatten()
-    acc = np.mean(predicted_class == actual)
-    return acc
 
-#VALIDACION CRUZADA
-# Inicializar la validación cruzada de 10 veces
-kfold = KFold(10, True, 1)
-bestaccuracy = 0
-scores = np.array([])
-theta_final = np.zeros(tfidf_train.shape[1])
+scores = ['precision', 'recall']
 
-#Dividir los datos del tren para entrenar y validar e iterar sobre pliegues
-for train, test in kfold.split(tfidf_train):
-    X_train = tfidf_train[train]
-    X_test = tfidf_train[test]    
-    Y_train = train_label[train]
-    #print (Y_train.shape)
-    Y_test = train_label[test]
-    #print (Y_test.shape)
+for score in scores:
+    print(" Ajuste de hiperparámetros para %s" % score)
+    print()
 
-    theta_out = gradient(X_train, Y_train)
-    pred = predict(X_test, theta_out)
-    acc_score = accuracy_score(Y_test, pred)
-    #print (acc_score)
+    grid = GridSearchCV(
+        LogisticRegression(),
+        param_grid,
+        refit= True,
+        n_jobs     = -1,
+        cv         = 5, 
+        verbose    = 2,
+        scoring='%s_micro' % score)
+    grid.fit(X_Train, Y_Train)
+    print (grid.best_params_)
 
-# Precisión para cada pliegue
-    scores = np.append(scores, acc_score)
+
+    print("El mejor conjunto de parámetros que se encuentra en el conjunto de desarrollo:")
+    print()
+    print(grid.best_params_)
+    print()
+    print(" Puntuaciones Grid en el conjunto de desarrollo:")
+    print()
+    means = grid.cv_results_['mean_test_score']
+    stds = grid.cv_results_['std_test_score']
+    for mean, std, params in zip(means, stds, grid.cv_results_['params']):
+        print("%0.3f (+/-%0.03f) for %r"
+              % (mean, std , params))
+    print()
     
-    if(acc_score > bestaccuracy):
-        theta_final = theta_out
-        bestaccuracy = acc_score
+    print("Informe de clasificación detallado:")
+    print()
+    print("El modelo se entrena en el conjunto de desarrollo completo.")
+    print("Las puntuaciones se calculan sobre el conjunto de evaluación completo")
+    print()
+    y_true, y_pred = Y_Test, grid.predict(X_Test)
+    print(classification_report(y_true, y_pred))
+    print()
+
+
+#MODELO SVM
+print ("CROSS VALIDATION SVM")
+clf = LogisticRegression(C= 4, penalty= 'l2',solver='sag').fit(X_Train, Y_Train)
+Y_Pred = clf.predict(X_Test)
+cm=confusion_matrix(Y_Test, Y_Pred)
+print (cm)
+
+accuracy = round(((cm[1, 1] + cm[0, 0] )/ (cm[1, 1] + cm[0, 1]+ cm[0, 0]+ cm[1, 0])) * 100, 2)
+print("Accuracy: ", accuracy)
+# ==============================================================================
+accu= accuracy_score(
+            y_true    = Y_Test,
+            y_pred    = Y_Pred,
+            normalize = True
+           )
 print("")
-print("Los valores de accuracy en validaciones cruzadas de 10 veces son: ", scores)
-print ("")
-print("Promedio de accuracy: ", scores.mean())
-print ("")
+print(f"El accuracy de test es: {100*accu}%")
 
-test_predicted = predict(tfidf_train, theta_final)
 
-# Precisión en los datos de prueba
-accuracy_test = accuracy_score(train_label, test_predicted)
-#print ("Acurracy: ")
-#print (accuracy_test)
-print ("")
-# Create confusion matrix
-confusionMatrix = pd.DataFrame(data = confusion_matrix(train_label, (test_predicted >= 0.5) .astype(int)), 
-                               columns=["0", "1"], index = ["0", "1"])
-print ("Matriz de confusión")
-print(confusionMatrix)
-print ("")
-# Precision = TP/(TP + FP)
-print ("Acurracy: ", accuracy_test)
-
-precision = round((confusionMatrix.iloc[1, 1] / (confusionMatrix.iloc[1, 1] + confusionMatrix.iloc[0, 1])) * 100, 2)
+#PRECISION = TP/(TP + FP)
+precision = round((cm[1, 1] / (cm[1, 1] + cm[0, 1])) * 100, 2)
 print("Precision: ", precision)
+p=precision_score(Y_Test, Y_Pred)
+print (p)
 
-# Recall = TP/(TP + FN)
-recall = round((confusionMatrix.iloc[1, 1] / (confusionMatrix.iloc[1, 1] + confusionMatrix.iloc[1, 0])) * 100, 2)
+
+# RECALL = TP/(TP + FN)
+recall = round((cm[1, 1] / (cm[1, 1] + cm[1, 0])) * 100, 2)
 print("Recall: ", recall)
-
-# calculate roc curve
-fpr, tpr, thresholds = metrics.roc_curve(train_label, test_predicted)
-lr_auc = metrics.roc_auc_score(train_label, test_predicted)
-print ("AUC: ", lr_auc)
-
-
+r=recall_score(Y_Test, Y_Pred)
+print (r)
 #F1
 f1=2*((precision*recall)/(precision+recall))
 print ("F1 Score: ", f1)
-                                      
+f=f1_score(Y_Test, Y_Pred)
+print (f)
+
+
+
+print ("************************************************************************************")
+clf = svm.SVC(kernel='rbf', C=1000, gamma=0.001, random_state=42)
+scores = cross_val_score(clf, X, Y, cv=5, scoring='accuracy')
+print (scores)
+print("%0.2f de Accuracy con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
+
+scores = cross_val_score(clf, X, Y, cv=5, scoring='precision_weighted')
+print (scores)
+print("%0.2f de Precision con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
+
+scores = cross_val_score(clf, X, Y, cv=5, scoring='recall')
+print (scores)
+print("%0.2f de Recall con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
+
+scores = cross_val_score(clf, X, Y, cv=5, scoring='f1_weighted')
+print (scores)
+print("%0.2f de F1-Score con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
+
+
 
