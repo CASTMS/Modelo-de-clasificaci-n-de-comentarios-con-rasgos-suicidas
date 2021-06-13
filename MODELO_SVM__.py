@@ -60,7 +60,7 @@ X = X.apply(lematizacion)
 
 #ESCALA DE CARACTERISTICAS 
 #APLICAR TF-IDF EN LA COLUMNA DE LOS WEETS DE ENTRENAMIENTO Y DE PRUEBA 
-vectorizer = TfidfVectorizer(stop_words='english', max_features = 3000)
+vectorizer = TfidfVectorizer(stop_words='english', max_features = 3000, ngram_range=(1,2))
 X = vectorizer.fit_transform(X).toarray()
 #tfidf_test = vectorizer.fit_transform(X_Test).toarray()
 #tfidf_test = vectorizer.transform(X_Test).toarray()
@@ -72,7 +72,7 @@ X = vectorizer.fit_transform(X).toarray()
 X_Train, X_Test, Y_Train, Y_Test = train_test_split(
     X, Y, test_size=0.20, random_state=0)
 
-
+"""
 # Establecer los parámetros mediante validación cruzada
 param_grid = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
                      'C': [1, 10, 100, 1000]},
@@ -122,46 +122,43 @@ for score in scores:
     print()
 
 """
-print ("CROSS VALIDATION SVM")
-clf = svm.SVC(kernel='rbf', C=1000, gamma=0.001, random_state=42).fit(X_Train, Y_Train)
+
+
+model = svm.SVC(kernel='linear', C=1, random_state=42)
+from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
+kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
+
+clf = model.fit(X_Train, Y_Train)
 Y_Pred = clf.predict(X_Test)
 cm=confusion_matrix(Y_Test, Y_Pred)
 print (cm)
 
-accuracy = round(((cm[1, 1] + cm[0, 0] )/ (cm[1, 1] + cm[0, 1]+ cm[0, 0]+ cm[1, 0])) * 100, 2)
-print("Accuracy: ", accuracy)
-# ==============================================================================
-accu= accuracy_score(
-            y_true    = Y_Test,
-            y_pred    = Y_Pred,
-            normalize = True
-           )
-print("")
-print(f"El accuracy de test es: {100*accu}%")
+
+# Get metrics
+accuracy = cross_val_score(model, X_Train, Y_Train, cv=kfold, scoring='accuracy')
+print (accuracy)
+print ("Promedio: ", accuracy.mean())
+print ("STD: ", accuracy.std())
+precision= cross_val_score(model, X_Train, Y_Train, cv=kfold, scoring='precision')
+print (precision)
+print ("Promedio: ",precision.mean())
+print ("STD: ", precision.std())
+
+recall = cross_val_score(model, X_Train, Y_Train, cv=kfold, scoring='recall')
+print (recall)
+print ("Promedio: ",recall.mean())
+print ("STD: ", recall.std())
+
+f1_macro = cross_val_score(model, X_Train, Y_Train, cv=kfold, scoring='f1_weighted')
+print (f1_macro)
+print ("Promedio: ",f1_macro.mean())
+print ("STD: ", f1_macro.std())
 
 
-#PRECISION = TP/(TP + FP)
-precision = round((cm[1, 1] / (cm[1, 1] + cm[0, 1])) * 100, 2)
-print("Precision: ", precision)
-p=precision_score(Y_Test, Y_Pred)
-print (p)
-
-
-# RECALL = TP/(TP + FN)
-recall = round((cm[1, 1] / (cm[1, 1] + cm[1, 0])) * 100, 2)
-print("Recall: ", recall)
-r=recall_score(Y_Test, Y_Pred)
-print (r)
-#F1
-f1=2*((precision*recall)/(precision+recall))
-print ("F1 Score: ", f1)
-f=f1_score(Y_Test, Y_Pred)
-print (f)
-
-
-
+"""
 print ("************************************************************************************")
-clf = svm.SVC(kernel='rbf', C=1000, gamma=0.001, random_state=42)
+clf = svm.SVC(kernel='linear', C=1, random_state=42)
 scores = cross_val_score(clf, X, Y, cv=5, scoring='accuracy')
 print (scores)
 print("%0.2f de Accuracy con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
@@ -178,26 +175,5 @@ scores = cross_val_score(clf, X, Y, cv=5, scoring='f1_weighted')
 print (scores)
 print("%0.2f de F1-Score con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
 
-
-
-
-
-from sklearn.model_selection import KFold
-from sklearn.model_selection import cross_val_predict 
-
-kf= KFold(n_splits=5)
-for train_index, test_index in kf.split(X):
-    X_Train, X_Test = X[train_index], X[test_index]
-    Y_Train, Y_Test = Y[train_index], Y[test_index]
-    clf.fit(X_Train, Y_Train)
-    print (confusion_matrix(Y_Test, clf.predict(X_Test)))
-
-
+    
 """
-
-
-
-
-
-
-
