@@ -62,7 +62,8 @@ X = X.apply(lematizacion)
 
 #ESCALA DE CARACTERISTICAS 
 #APLICAR TF-IDF EN LA COLUMNA DE LOS WEETS DE ENTRENAMIENTO Y DE PRUEBA 
-vectorizer = TfidfVectorizer(stop_words='english', max_features = 3000)
+vectorizer = TfidfVectorizer(stop_words='english', max_features = 10000,
+                             ngram_range=(2,2), analyzer='char_wb')
 X = vectorizer.fit_transform(X).toarray()
 #tfidf_test = vectorizer.fit_transform(X_Test).toarray()
 #tfidf_test = vectorizer.transform(X_Test).toarray()
@@ -76,7 +77,7 @@ X_Train, X_Test, Y_Train, Y_Test = train_test_split(
 
 print (Y_Test.shape)
 print (X_Test.shape)
-
+"""
 #GRID SEARCH
 # Establecer los parámetros mediante validación cruzada
 param_grid = [{'penalty':['l1'],'C':[1,4,5,10,100,1000],'solver':['liblinear']},
@@ -125,62 +126,68 @@ for score in scores:
     print()
 
 
-#MODELO SVM
-print ("CROSS VALIDATION SVM")
-clf = LogisticRegression(C= 4, penalty= 'l2',solver='sag').fit(X_Train, Y_Train)
+
+
+"""
+
+
+
+model = LogisticRegression(C= 4, penalty= 'l2',solver='sag')
+from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
+kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
+
+clf = model.fit(X_Train, Y_Train)
 Y_Pred = clf.predict(X_Test)
 cm=confusion_matrix(Y_Test, Y_Pred)
 print (cm)
+# Get metrics
+accuracy = cross_val_score(model, X_Train, Y_Train, cv=kfold, scoring='accuracy')
+print (accuracy)
+print ("Promedio: ", accuracy.mean())
+print ("STD: ", accuracy.std())
+precision= cross_val_score(model, X_Train, Y_Train, cv=kfold, scoring='precision_weighted')
+print (precision)
+print ("Promedio: ",precision.mean())
+print ("STD: ", precision.std())
 
-accuracy = round(((cm[1, 1] + cm[0, 0] )/ (cm[1, 1] + cm[0, 1]+ cm[0, 0]+ cm[1, 0])) * 100, 2)
-print("Accuracy: ", accuracy)
-# ==============================================================================
-accu= accuracy_score(
-            y_true    = Y_Test,
-            y_pred    = Y_Pred,
-            normalize = True
-           )
-print("")
-print(f"El accuracy de test es: {100*accu}%")
+recall = cross_val_score(model, X_Train, Y_Train, cv=kfold, scoring='recall')
+print (recall)
+print ("Promedio: ",recall.mean())
+print ("STD: ", recall.std())
 
-
-#PRECISION = TP/(TP + FP)
-precision = round((cm[1, 1] / (cm[1, 1] + cm[0, 1])) * 100, 2)
-print("Precision: ", precision)
-p=precision_score(Y_Test, Y_Pred)
-print (p)
-
-
-# RECALL = TP/(TP + FN)
-recall = round((cm[1, 1] / (cm[1, 1] + cm[1, 0])) * 100, 2)
-print("Recall: ", recall)
-r=recall_score(Y_Test, Y_Pred)
-print (r)
-#F1
-f1=2*((precision*recall)/(precision+recall))
-print ("F1 Score: ", f1)
-f=f1_score(Y_Test, Y_Pred)
-print (f)
+f1_macro = cross_val_score(model, X_Train, Y_Train, cv=kfold, scoring='f1_weighted')
+print (f1_macro)
+print ("Promedio: ",f1_macro.mean())
+print ("STD: ", f1_macro.std())
 
 
+
+"""
 
 print ("************************************************************************************")
-clf = svm.SVC(kernel='rbf', C=1000, gamma=0.001, random_state=42)
-scores = cross_val_score(clf, X, Y, cv=5, scoring='accuracy')
+clf = LogisticRegression(C= 4, penalty= 'l2',solver='sag')
+#Y_Pred = clf.predict(X_Test)
+
+scores = cross_val_score(clf, X, Y, cv=10, scoring='accuracy')
 print (scores)
 print("%0.2f de Accuracy con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
 
-scores = cross_val_score(clf, X, Y, cv=5, scoring='precision_weighted')
+scores = cross_val_score(clf, X, Y, cv=10, scoring='precision_weighted')
 print (scores)
 print("%0.2f de Precision con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
 
-scores = cross_val_score(clf, X, Y, cv=5, scoring='recall')
+
+scores = cross_val_score(clf, X, Y, cv=10, scoring='recall')
 print (scores)
 print("%0.2f de Recall con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
 
-scores = cross_val_score(clf, X, Y, cv=5, scoring='f1_weighted')
+scores = cross_val_score(clf, X, Y, cv=10, scoring='f1_weighted')
 print (scores)
 print("%0.2f de F1-Score con una desviación estándar de %0.2f" % (scores.mean(), scores.std()))
+"""
+
+
 
 
 
